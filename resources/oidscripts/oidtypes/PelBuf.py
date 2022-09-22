@@ -12,7 +12,7 @@ from oidscripts import symbols
 from oidscripts.oidtypes import interface
 
 
-class AreaBuf(interface.TypeInspectorInterface):
+class PelBuf(interface.TypeInspectorInterface):
     """
     Implementation for inspecting AreaBuf type (NextSoftware)
     """
@@ -33,13 +33,13 @@ class AreaBuf(interface.TypeInspectorInterface):
 
         # Assign the GIW type according to underlying type
         if current_type == 'short':
-            type_value = symbols.GIW_TYPES_INT16
+            type_value = symbols.OID_TYPES_INT16
         elif current_type == 'float':
-            type_value = symbols.GIW_TYPES_FLOAT32
+            type_value = symbols.OID_TYPES_FLOAT32
         elif current_type == 'double':
-            type_value = symbols.GIW_TYPES_FLOAT64
+            type_value = symbols.OID_TYPES_FLOAT64
         elif current_type == 'int':
-            type_value = symbols.GIW_TYPES_INT32
+            type_value = symbols.OID_TYPES_INT32
 
         buffer = debugger_bridge.get_casted_pointer(current_type,picked_obj['buf'])
 

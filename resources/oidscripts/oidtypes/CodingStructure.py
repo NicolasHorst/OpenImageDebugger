@@ -40,13 +40,13 @@ class CodingStructure(interface.TypeInspectorInterface):
             print("new current_type: %s" % current_type)
         # Assign the GIW type according to underlying type
         if current_type == 'short':
-            type_value = symbols.GIW_TYPES_INT16
+            type_value = symbols.OID_TYPES_INT16
         elif current_type == 'float':
-            type_value = symbols.GIW_TYPES_FLOAT32
+            type_value = symbols.OID_TYPES_FLOAT32
         elif current_type == 'double':
-            type_value = symbols.GIW_TYPES_FLOAT64
+            type_value = symbols.OID_TYPES_FLOAT64
         elif current_type == 'int':
-            type_value = symbols.GIW_TYPES_INT32
+            type_value = symbols.OID_TYPES_INT32
 
         print("used current_type: %s; type_value: %s" % (current_type, type_value))
 

@@ -28,9 +28,15 @@ project(OpenImageDebugger)
 include(${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
 
 add_subdirectory(src)
-add_subdirectory(src/oidbridge/python2)
-if(NOT WIN32)
-    add_subdirectory(src/oidbridge/python3)
+
+if(APPLE)
+    message(STATUS "Python2 is unavailable on MacOS")
 else()
+    add_subdirectory(src/oidbridge/python2)
+endif()
+
+if(WIN32)
     message(WARNING "Python3 is currently not supported on Windows")
+else()
+    add_subdirectory(src/oidbridge/python3)
 endif()

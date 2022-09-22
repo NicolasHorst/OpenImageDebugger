@@ -61,7 +61,7 @@ class AreaBuf(interface.TypeInspectorInterface):
             'transpose_buffer': False
         }
 
-    def is_symbol_observable(self, symbol):
+    def is_symbol_observable(self, symbol, symbol_name):
         """
         Returns true if the given symbol is of observable type (the type of the
         buffer you are working with). Make sure to check for pointers of your

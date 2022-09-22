@@ -235,8 +235,8 @@ class SymbolWrapper(DebuggerSymbolReference):
             invalid_member_requested = member > num_children
             get_symbol_child = self._symbol.GetChildAtIndex
         elif isinstance(member, str):
-            invalid_member_requested = self._symbol.GetIndexOfChildWithName(
-                member) > num_children
+            invalid_member_requested = self._symbol.GetChildMemberWithName(
+                member).name == None
             get_symbol_child = self._symbol.GetChildMemberWithName
 
         if invalid_member_requested:

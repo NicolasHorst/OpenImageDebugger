@@ -8,8 +8,8 @@ plotted in the ImageWatch window.
 
 import re
 
-from giwscripts import symbols
-from giwscripts.giwtypes import interface
+from oidscripts import symbols
+from oidscripts.oidtypes import interface
 
 
 class PelStorage(interface.TypeInspectorInterface):

@@ -25,7 +25,7 @@ class AreaBuf(interface.TypeInspectorInterface):
         """
 
         type_str = str(picked_obj.type)
-        current_type = str(picked_obj.type.template_argument(0))
+        current_type = str(picked_obj.sbtype.GetTemplateArgumentType(0))
 
         width = int(picked_obj['width'])
         height= int(picked_obj['height'])

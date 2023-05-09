@@ -29,7 +29,7 @@ class EigenXX(interface.TypeInspectorInterface):
         # parsing a Map, the type is the first template parameter of the
         # wrapper type. Otherwise, it is the type field of the picked_obj
         if is_eigen_map:
-            matrix_type_obj = picked_obj.type.template_argument(0)
+            matrix_type_obj = picked_obj.sbtype.GetTemplateArgumentType(0)
         else:
             matrix_type_obj = picked_obj.type
 

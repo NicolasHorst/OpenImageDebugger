@@ -24,7 +24,7 @@ class CodingStructure(interface.TypeInspectorInterface):
         write out the color channels in different matrices.
         """
         type_str = str(picked_obj.type)
-        current_type = str(picked_obj['m_reco']['bufs']['_arr'][0].type.template_argument(0))
+        current_type = str(picked_obj['m_reco']['bufs']['_arr'][0].sbtype.GetTemplateArgumentType(0))
         print(type_str)
         print(current_type)
 

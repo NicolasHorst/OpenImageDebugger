@@ -217,6 +217,7 @@ class SymbolWrapper(DebuggerSymbolReference):
     def __init__(self, symbol):
         self._symbol = symbol  # type: lldb.SBValue
         self.type = symbol.GetTypeName()  # type: str
+        self.sbtype = symbol.GetType()  # type: SBType
 
     def __str__(self):
         return str(self._symbol.GetValue())

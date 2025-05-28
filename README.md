@@ -83,6 +83,12 @@ cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/path/to/installation/folder
 cmake --build build --config Release --target install -j 4
 ```
 
+for MacOS, additionally link to the python version used by lldb (done in src/oidbridge/CMakeLists.txt)
+```bash
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/Users/nneumann/repos/tools/OpenImageDebugger/bin -DCMAKE_PREFIX_PATH=/opt/homebrew/Cellar/qt@5/5.15.16_2/lib/cmake/Qt5
+cmake --build build --config Release --target install -j 4
+```
+
 **GDB integration:** Edit the file `~/.gdbinit` (create it if it doesn't exist)
 and append the following line:
 

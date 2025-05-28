@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2020 OpenImageDebugger
+ * Copyright (c) 2015-2025 OpenImageDebugger
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,28 +29,35 @@
 #include <string>
 #include <vector>
 
+namespace oid
+{
+
 /**
  * Interface to process calling classes
  */
-class ProcessImpl {
-public:
+class ProcessImpl
+{
+  public:
     virtual ~ProcessImpl() noexcept = default;
+
     /**
      * Start the process represented by its path and arguments
      * @param command binary and path and its arguments
      */
-    virtual void start(const std::vector<std::string>& command) = 0;
+    virtual void start(std::vector<std::string>& command) = 0;
 
     /**
      * Check if the process is running
      * @return true if running, false otherwise
      */
-    virtual bool isRunning() const = 0;
+    [[nodiscard]] virtual bool isRunning() const = 0;
 
     /**
      * Kill the process
      */
     virtual void kill() = 0;
 };
+
+} // namespace oid
 
 #endif // #ifndef SYSTEM_PROCESS_IMPL_H_

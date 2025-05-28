@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2024 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,17 +25,17 @@
 
 #include "component.h"
 
+namespace oid
+{
 
 Component::Component(GameObject* game_object, GLCanvas* gl_canvas)
-    : game_object_(game_object)
-    , gl_canvas_(gl_canvas)
+    : game_object_{game_object}
+    , gl_canvas_{gl_canvas}
 {
 }
 
 
-Component::~Component()
-{
-}
+Component::~Component() = default;
 
 
 bool Component::initialize()
@@ -62,10 +62,9 @@ int Component::render_index() const
 }
 
 
-
-
-
 bool Component::post_initialize()
 {
     return true;
 }
+
+} // namespace oid

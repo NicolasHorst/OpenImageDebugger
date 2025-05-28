@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,39 +26,47 @@
 #ifndef GL_TEXT_RENDERER_H_
 #define GL_TEXT_RENDERER_H_
 
-#include "math/linear_algebra.h"
+#include <array>
+
+#include "GL/gl.h"
+
 #include "ui/gl_canvas.h"
 #include "visualization/shader.h"
 
+namespace oid
+{
+
+// std::array<std::array<int, 2>, 256> is int[256][2]
+using Array_256_2 = std::array<std::array<int, 2>, 256>;
 
 class GLTextRenderer
 {
   public:
-    static constexpr float font_size = 96.0f;
+    QFont font{"Times New Roman", 96};
+    GLuint text_vbo{0};
+    GLuint text_tex{0};
 
-    QFont font;
-    GLuint text_vbo;
-    GLuint text_tex;
+    Array_256_2 text_texture_offsets{};
+    Array_256_2 text_texture_advances{};
+    Array_256_2 text_texture_sizes{};
+    Array_256_2 text_texture_tls{};
 
-    int text_texture_offsets[256][2];
-    int text_texture_advances[256][2];
-    int text_texture_sizes[256][2];
-    int text_texture_tls[256][2];
-
-    GLTextRenderer(GLCanvas* gl_canvas);
+    explicit GLTextRenderer(GLCanvas* gl_canvas);
     ~GLTextRenderer();
 
     bool initialize();
 
     void generate_glyphs_texture();
 
-    ShaderProgram text_prog;
+    ShaderProgram text_prog{nullptr};
 
-    float text_texture_width;
-    float text_texture_height;
+    float text_texture_width{0};
+    float text_texture_height{0};
 
   private:
-    GLCanvas* gl_canvas_;
+    GLCanvas* gl_canvas_{};
 };
+
+} // namespace oid
 
 #endif // GL_TEXT_RENDERER_H_

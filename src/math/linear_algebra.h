@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,41 +26,47 @@
 #ifndef LINEAR_ALGEBRA_H_
 #define LINEAR_ALGEBRA_H_
 
-#include <cstring>
-#include <iostream>
-
 #include <Eigen>
 
+namespace oid
+{
 
 class mat4;
-
 
 class vec4
 {
     friend class mat4;
 
   public:
-    vec4();
+    vec4() = default;
 
-    ~vec4() = default;
-
-    vec4(const vec4& b);
-
-    vec4(vec4&& b) = default;
-
-    vec4& operator=(const vec4& b);
-
-    vec4& operator=(vec4&& b) = default;
+    vec4(float x, float y, float z, float w);
 
     vec4& operator+=(const vec4& b);
 
-    vec4 operator+(const vec4& b) const;
+    friend vec4 operator+(const vec4& a, const vec4& b)
+    {
+        return {a.vec_[0] + b.vec_[0],
+                a.vec_[1] + b.vec_[1],
+                a.vec_[2] + b.vec_[2],
+                a.vec_[3] + b.vec_[3]};
+    }
 
-    vec4 operator-(const vec4& b) const;
+    friend vec4 operator-(const vec4& a, const vec4& b)
+    {
+        return {a.vec_[0] - b.vec_[0],
+                a.vec_[1] - b.vec_[1],
+                a.vec_[2] - b.vec_[2],
+                a.vec_[3] - b.vec_[3]};
+    }
 
-    vec4 operator*(float scalar) const;
+    friend vec4 operator*(const vec4& vec, const float scalar)
+    {
+        auto result = vec4{vec};
+        result.vec_ *= scalar;
 
-    vec4(float x, float y, float z, float w);
+        return result;
+    }
 
     void print() const;
 
@@ -71,15 +77,15 @@ class vec4
     float& z();
     float& w();
 
-    const float& x() const;
-    const float& y() const;
-    const float& z() const;
-    const float& w() const;
+    [[nodiscard]] const float& x() const;
+    [[nodiscard]] const float& y() const;
+    [[nodiscard]] const float& z() const;
+    [[nodiscard]] const float& w() const;
 
     static vec4 zero();
 
   private:
-    Eigen::Vector4f vec;
+    Eigen::Vector4f vec_{};
 };
 
 vec4 operator-(const vec4& vector);
@@ -113,11 +119,18 @@ class mat4
 
     void print() const;
 
-    mat4 inv() const;
+    [[nodiscard]] mat4 inv() const;
 
-    mat4 operator*(const mat4& b) const;
+    friend mat4 operator*(const mat4& a, const mat4& b)
+    {
+        auto res = mat4{};
 
-    vec4 operator*(const vec4& b) const;
+        res.mat_ = a.mat_ * b.mat_;
+
+        return res;
+    }
+
+    vec4 operator*(const vec4& vec) const;
 
     float& operator()(int row, int col);
 
@@ -128,7 +141,9 @@ class mat4
     static mat4 scale(const vec4& factor);
 
   private:
-    Eigen::Matrix4f mat_;
+    Eigen::Matrix4f mat_{};
 };
+
+} // namespace oid
 
 #endif // LINEAR_ALGEBRA_H_

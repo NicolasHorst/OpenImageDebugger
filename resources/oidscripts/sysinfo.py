@@ -24,35 +24,22 @@ def _get_available_memory_linux():
 
 def _get_available_memory_darwin():
     # type: () -> int
-    # Get process info
-    ps = subprocess.Popen(['/bin/ps', '-caxm', '-o rss=', '-o comm='],
-                          stdout=subprocess.PIPE).communicate()[0].decode()
     vm = subprocess.Popen(['vm_stat'], stdout=subprocess.PIPE).communicate()[
         0].decode()
-
-    # Iterate processes
-    process_lines = ps.split('\n')
-    sep = re.compile(r'[\s]+')
-    rss_total = 0  # kB
-    for row in range(1, len(process_lines)):
-        row_text = process_lines[row].strip()
-        if not row_text:
-            continue
-        row_elements = sep.split(row_text)
-        try:
-            rss = float(row_elements[0]) * 1024
-        except IndexError:
-            rss = 0  # ignore...
-        rss_total += rss
 
     # Process vm_stat
     vm_lines = vm.split('\n')
     sep = re.compile(r':[\s]+')
     vm_stats = {}
+
+    psre = 'page size of (\\d+) bytes'
+    match = re.search(psre, vm_lines[0])
+    page_size = int(match.group(1)) if match else 16384
+
     for row in range(1, len(vm_lines) - 2):
         row_text = vm_lines[row].strip()
         row_elements = sep.split(row_text)
-        vm_stats[(row_elements[0])] = int(row_elements[1].strip('\.')) * 4096
+        vm_stats[(row_elements[0])] = int(row_elements[1].strip('.')) * page_size
     return vm_stats["Pages free"]
 
 def _get_available_memory_win32():
@@ -98,21 +85,55 @@ def get_available_memory():
     elif platform == 'win32':
         return _get_available_memory_win32()
     else:
-        raise Exception('Platform %s not supported' % platform)
+        raise ValueError('Platform %s not supported' % platform)
+
+
+def get_type_name(typevalue):
+    """
+    Get the human-readable name of matrix type
+    """
+    if (typevalue == symbols.OID_TYPES_UINT8):
+        return '8U'
+    if (typevalue == symbols.OID_TYPES_UINT16):
+        return '16U'
+    if (typevalue == symbols.OID_TYPES_INT16):
+        return '16S'
+    if (typevalue == symbols.OID_TYPES_INT32):
+        return '32S'
+    if (typevalue == symbols.OID_TYPES_FLOAT32):
+        return '32F'
+    if typevalue == symbols.OID_TYPES_FLOAT64:
+        return '64F'
+
+    return '?'
+
+
+def get_type_name_full(channels, typevalue):
+    """
+    Get the human-readable name of matrix type
+    """
+    return "%sC%d" % (get_type_name(typevalue), channels)
+
+
+def get_channel_size(typevalue):
+    """
+    Compute the channel size in bytes
+    """
+    if (typevalue == symbols.OID_TYPES_UINT16 or
+        typevalue == symbols.OID_TYPES_INT16):
+        return 2  # 2 bytes per element
+    if (typevalue == symbols.OID_TYPES_INT32 or
+        typevalue == symbols.OID_TYPES_FLOAT32):
+        return 4  # 4 bytes per element
+    if typevalue == symbols.OID_TYPES_FLOAT64:
+        return 8  # 8 bytes per element
+    
+    return 1
 
 
 def get_buffer_size(height, channels, typevalue, rowstride):
     """
     Compute the buffer size in bytes
     """
-    channel_size = 1
-    if (typevalue == symbols.OID_TYPES_UINT16 or
-            typevalue == symbols.OID_TYPES_INT16):
-        channel_size = 2  # 2 bytes per element
-    elif (typevalue == symbols.OID_TYPES_INT32 or
-          typevalue == symbols.OID_TYPES_FLOAT32):
-        channel_size = 4  # 4 bytes per element
-    elif typevalue == symbols.OID_TYPES_FLOAT64:
-        channel_size = 8  # 8 bytes per element
-
+    channel_size = get_channel_size(typevalue)
     return channel_size * channels * rowstride * height

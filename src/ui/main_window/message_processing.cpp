@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,23 +23,28 @@
  * IN THE SOFTWARE.
  */
 
+#include "ipc/message_exchange.h"
 #include "main_window.h"
+
+#include <bit>
+#include <iostream>
+#include <memory>
+#include <ranges>
 
 #include "ui_main_window.h"
 
-using namespace std;
-
+namespace oid
+{
 
 void MainWindow::decode_set_available_symbols()
 {
-    std::unique_lock<std::mutex> lock(ui_mutex_);
-    MessageDecoder message_decoder(&socket_);
+    const auto lock      = std::unique_lock{ui_mutex_};
+    auto message_decoder = MessageDecoder{&socket_};
     message_decoder.read<QStringList, QString>(available_vars_);
 
     for (const auto& symbol_value : available_vars_) {
         // Plot buffer if it was available in the previous session
-        if (previous_session_buffers_.find(symbol_value.toStdString()) !=
-            previous_session_buffers_.end()) {
+        if (previous_session_buffers_.contains(symbol_value.toStdString())) {
             request_plot_buffer(symbol_value.toStdString().data());
         }
     }
@@ -50,37 +55,92 @@ void MainWindow::decode_set_available_symbols()
 
 void MainWindow::respond_get_observed_symbols()
 {
-    MessageComposer message_composer;
+    auto message_composer = MessageComposer{};
     message_composer.push(MessageType::GetObservedSymbolsResponse)
         .push(held_buffers_.size());
-    for (const auto& name : held_buffers_) {
-        message_composer.push(name.first);
+    for (const auto& name : held_buffers_ | std::views::keys) {
+        message_composer.push(name);
     }
     message_composer.send(&socket_);
 }
 
 
+QListWidgetItem*
+MainWindow::find_image_list_item(const std::string& variable_name_str) const
+{
+    // Looking for corresponding item...
+    for (int i = 0; i < ui_->imageList->count(); ++i) {
+        const auto item = ui_->imageList->item(i);
+        if (item->data(Qt::UserRole) != variable_name_str.c_str()) {
+            continue;
+        }
+
+        return item;
+    }
+    return nullptr;
+}
+
+
+void MainWindow::repaint_image_list_icon(const std::string& variable_name_str)
+{
+    const auto itStage = stages_.find(variable_name_str);
+    if (itStage == stages_.end()) {
+        return;
+    }
+
+    const auto& stage = itStage->second;
+
+    // Buffer icon dimensions
+    const auto icon_size      = get_icon_size();
+    const auto icon_width     = static_cast<int>(icon_size.width());
+    const auto icon_height    = static_cast<int>(icon_size.height());
+    const auto bytes_per_line = icon_width * 3;
+
+    // Update buffer icon
+    ui_->bufferPreview->render_buffer_icon(
+        stage.get(), icon_width, icon_height);
+
+    // Construct icon widget
+    const auto bufferIcon = QImage{stage->buffer_icon.data(),
+                                   icon_width,
+                                   icon_height,
+                                   bytes_per_line,
+                                   QImage::Format_RGB888};
+
+    // Replace icon in the corresponding item
+    if (const auto item = find_image_list_item(variable_name_str);
+        item != nullptr) {
+        item->setIcon(QPixmap::fromImage(bufferIcon));
+    }
+}
+
+
+void MainWindow::update_image_list_label(const std::string& variable_name_str,
+                                         const std::string& label_str) const
+{
+    // Replace text in the corresponding item
+    if (const auto item = find_image_list_item(variable_name_str);
+        item != nullptr) {
+        item->setText(label_str.c_str());
+    }
+}
+
+
 void MainWindow::decode_plot_buffer_contents()
 {
-    // Buffer icon dimensions
-    QSizeF icon_size         = get_icon_size();
-    int icon_width           = static_cast<int>(icon_size.width());
-    int icon_height          = static_cast<int>(icon_size.height());
-    const int bytes_per_line = icon_width * 3;
-
     // Read buffer info
-    string variable_name_str;
-    string display_name_str;
-    string pixel_layout_str;
-    bool transpose_buffer;
-    int buff_width;
-    int buff_height;
-    int buff_channels;
-    int buff_stride;
-    BufferType buff_type;
-    vector<uint8_t> buff_contents;
+    auto variable_name_str = std::string{};
+    auto display_name_str  = std::string{};
+    auto pixel_layout_str  = std::string{};
+    auto transpose_buffer  = bool{};
+    auto buff_width        = int{};
+    auto buff_height       = int{};
+    auto buff_channels     = int{};
+    auto buff_stride       = int{};
+    auto buff_type         = BufferType{};
+    auto buff_contents     = std::vector<std::uint8_t>{};
 
-    MessageDecoder message_decoder(&socket_);
+    auto message_decoder = MessageDecoder{&socket_};
     message_decoder.read(variable_name_str)
         .read(display_name_str)
         .read(pixel_layout_str)
@@ -92,18 +152,18 @@ void MainWindow::decode_plot_buffer_contents()
         .read(buff_type)
         .read(buff_contents);
 
-    auto buffer_stage = stages_.find(variable_name_str);
-
+    // Put the data buffer into the container
     if (buff_type == BufferType::Float64) {
         held_buffers_[variable_name_str] =
             make_float_buffer_from_double(buff_contents);
     } else {
         held_buffers_[variable_name_str] = std::move(buff_contents);
     }
+    const auto buff_ptr = held_buffers_[variable_name_str].data();
 
     // Human readable dimensions
-    int visualized_width;
-    int visualized_height;
+    auto visualized_width  = int{};
+    auto visualized_height = int{};
     if (!transpose_buffer) {
         visualized_width  = buff_width;
         visualized_height = buff_height;
@@ -112,9 +172,22 @@ void MainWindow::decode_plot_buffer_contents()
         visualized_height = buff_width;
     }
 
-    if (buffer_stage == stages_.end()) { // New buffer request
-        shared_ptr<Stage> stage = make_shared<Stage>(this);
-        if (!stage->initialize(held_buffers_[variable_name_str].data(),
+    const auto label_str = [&] {
+        std::stringstream label_ss;
+        label_ss << display_name_str;
+        label_ss << "\n[" << visualized_width << "x" << visualized_height
+                 << "]";
+        label_ss << "\n" << get_type_label(buff_type, buff_channels);
+        return label_ss.str();
+    }();
+
+    // Find corresponding stage buffer
+    if (auto buffer_stage = stages_.find(variable_name_str);
+        buffer_stage == stages_.end()) {
+
+        // Construct a new stage buffer if needed
+        auto stage = std::make_shared<Stage>(this);
+        if (!stage->initialize(buff_ptr,
                                buff_width,
                                buff_height,
                                buff_channels,
@@ -122,76 +195,47 @@ void MainWindow::decode_plot_buffer_contents()
                                buff_stride,
                                pixel_layout_str,
                                transpose_buffer)) {
-            cerr << "[error] Could not initialize opengl canvas!" << endl;
+            std::cerr << "[error] Could not initialize opengl canvas!"
+                      << std::endl;
         }
-        stage->contrast_enabled    = ac_enabled_;
-        stages_[variable_name_str] = stage;
+        stage->contrast_enabled = ac_enabled_;
+        buffer_stage = stages_.try_emplace(variable_name_str, stage).first;
+    } else {
 
-        ui_->bufferPreview->render_buffer_icon(
-            stage.get(), icon_width, icon_height);
+        // Update buffer data
+        buffer_stage->second->buffer_update(buff_ptr,
+                                            buff_width,
+                                            buff_height,
+                                            buff_channels,
+                                            buff_type,
+                                            buff_stride,
+                                            pixel_layout_str,
+                                            transpose_buffer);
+    }
 
-        QImage bufferIcon(stage->buffer_icon.data(),
-                          icon_width,
-                          icon_height,
-                          bytes_per_line,
-                          QImage::Format_RGB888);
-
-        stringstream label;
-        label << display_name_str << "\n[" << visualized_width << "x"
-              << visualized_height << "]\n"
-              << get_type_label(buff_type, buff_channels);
-        QListWidgetItem* item =
-            new QListWidgetItem(QPixmap::fromImage(bufferIcon),
-                                label.str().c_str(),
-                                ui_->imageList);
+    // Construct a new list widget if needed
+    if (auto item = find_image_list_item(variable_name_str); item == nullptr) {
+        item =
+            std::make_unique<QListWidgetItem>(label_str.c_str(), ui_->imageList)
+                .release();
         item->setData(Qt::UserRole, QString(variable_name_str.c_str()));
         item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled |
                        Qt::ItemIsDragEnabled);
         ui_->imageList->addItem(item);
-
-        persist_settings_deferred();
-    } else { // Update buffer request
-        buffer_stage->second->buffer_update(
-            held_buffers_[variable_name_str].data(),
-            buff_width,
-            buff_height,
-            buff_channels,
-            buff_type,
-            buff_stride,
-            pixel_layout_str,
-            transpose_buffer);
-
-        // Update buffer icon
-        shared_ptr<Stage>& stage = stages_[variable_name_str];
-        ui_->bufferPreview->render_buffer_icon(
-            stage.get(), icon_width, icon_height);
-
-        // Looking for corresponding item...
-        QImage bufferIcon(stage->buffer_icon.data(),
-                          icon_width,
-                          icon_height,
-                          bytes_per_line,
-                          QImage::Format_RGB888);
-        stringstream label;
-        label << display_name_str << "\n[" << visualized_width << "x"
-              << visualized_height << "]\n"
-              << get_type_label(buff_type, buff_channels);
-
-        for (int i = 0; i < ui_->imageList->count(); ++i) {
-            QListWidgetItem* item = ui_->imageList->item(i);
-            if (item->data(Qt::UserRole) == variable_name_str.c_str()) {
-                item->setIcon(QPixmap::fromImage(bufferIcon));
-                item->setText(label.str().c_str());
-                break;
-            }
-        }
-
-        // Update AC values
-        if (currently_selected_stage_ != nullptr) {
-            reset_ac_min_labels();
-            reset_ac_max_labels();
-        }
     }
+
+    // Update icon and text of corresponding item in image list
+    repaint_image_list_icon(variable_name_str);
+    update_image_list_label(variable_name_str, label_str);
+
+    // Update AC values
+    if (currently_selected_stage_ != nullptr) {
+        reset_ac_min_labels();
+        reset_ac_max_labels();
+    }
+
+    // Update list of observed symbols in settings
+    persist_settings_deferred();
 
     request_render_update_ = true;
 }
@@ -200,7 +244,7 @@ void MainWindow::decode_plot_buffer_contents()
 void MainWindow::decode_incoming_messages()
 {
     // Close application if server has disconnected
-    if(socket_.state() == QTcpSocket::UnconnectedState) {
+    if (socket_.state() == QTcpSocket::UnconnectedState) {
         QApplication::quit();
     }
 
@@ -210,8 +254,8 @@ void MainWindow::decode_incoming_messages()
         return;
     }
 
-    MessageType header;
-    if (!socket_.read(reinterpret_cast<char*>(&header),
+    auto header = MessageType{};
+    if (!socket_.read(std::bit_cast<char*>(&header),
                       static_cast<qint64>(sizeof(header)))) {
         return;
     }
@@ -236,8 +280,10 @@ void MainWindow::decode_incoming_messages()
 
 void MainWindow::request_plot_buffer(const char* buffer_name)
 {
-    MessageComposer message_composer;
+    auto message_composer = MessageComposer{};
     message_composer.push(MessageType::PlotBufferRequest)
         .push(std::string(buffer_name))
         .send(&socket_);
 }
+
+} // namespace oid

@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2021 OpenImageDebugger
+ * Copyright (c) 2015-2025 OpenImageDebugger
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,16 +31,13 @@
 #include <QProcess>
 #include <QString>
 
-using namespace std;
-
-class ProcessImplWin32 final: public ProcessImpl
+namespace oid
 {
-public:
-    ProcessImplWin32()
-        : proc_()
-    {}
 
-    void start(const std::vector<std::string> &command) override
+class ProcessImplWin32 final : public ProcessImpl
+{
+  public:
+    void start(std::vector<std::string>& command) override
     {
         const auto program = QString::fromStdString(command[0]);
         QStringList args;
@@ -52,7 +49,7 @@ public:
         proc_.waitForStarted();
     }
 
-    bool isRunning() const override
+    [[nodiscard]] bool isRunning() const override
     {
         return proc_.state() == QProcess::Running;
     }
@@ -62,11 +59,13 @@ public:
         proc_.kill();
     }
 
-private:
-    QProcess proc_;
+  private:
+    QProcess proc_{};
 };
 
 void Process::createImpl()
 {
-    impl_ = make_shared<ProcessImplWin32>();
+    impl_ = std::make_shared<ProcessImplWin32>();
 }
+
+} // namespace oid

@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2024 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,12 +31,14 @@
 #include <Python.h>
 
 
-#if PY_MAJOR_VERSION==2
-#define PY_INT_CHECK_FUNC PyInt_Check
-#else
+#if PY_MAJOR_VERSION == 3
 #define PY_INT_CHECK_FUNC PyLong_Check
+#else
+#error "Unsupported Python version"
 #endif
 
+namespace oid
+{
 
 long get_py_int(PyObject* obj);
 
@@ -44,12 +46,16 @@ long get_py_int(PyObject* obj);
 int check_py_string_type(PyObject* obj);
 
 
-void* get_c_ptr_from_py_buffer(PyObject* obj);
+void get_c_ptr_from_py_buffer(PyObject* obj,
+                              uint8_t*& buffer_ptr,
+                              size_t& buffer_size);
 
 
 uint8_t* get_c_ptr_from_py_tuple(PyObject* obj, int tuple_index);
 
 
 void copy_py_string(std::string& dst, PyObject* src);
+
+} // namespace oid
 
 #endif // PYTHON_NATIVE_INTERFACE_H_

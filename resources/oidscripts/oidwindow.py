@@ -6,16 +6,18 @@ Classes related to exposing an interface to the OpenImageDebugger window
 
 import ctypes
 import ctypes.util
+import os
 import platform
 import sys
 import time
+
+from oidscripts.logger import log
 
 FETCH_BUFFER_CBK_TYPE = ctypes.CFUNCTYPE(ctypes.c_int,
                                          ctypes.c_char_p)
 
 
 PLATFORM_NAME = platform.system().lower()
-
 
 class OpenImageDebuggerWindow(object):
     """
@@ -25,6 +27,10 @@ class OpenImageDebuggerWindow(object):
     def __init__(self, script_path, bridge):
         self._bridge = bridge
         self._script_path = script_path
+
+        if PLATFORM_NAME == 'windows':
+            os.add_dll_directory(script_path)
+            os.add_dll_directory(os.getenv('Qt5_Dir') + '/' + 'bin')
 
         # Request ctypes to load libGL before the native oidwindow does; this
         # fixes an issue on Ubuntu machines with nvidia drivers. For more
@@ -85,14 +91,11 @@ class OpenImageDebuggerWindow(object):
         Return the name of the binary library, including its extension, which
         is platform dependent.
         """
-        python_version = '_python%d' % sys.version_info[0]
-
-        if PLATFORM_NAME == 'linux':
-            return 'liboidbridge%s.so' % python_version
-        elif PLATFORM_NAME == 'darwin':
-            return 'liboidbridge%s.dylib' % python_version
+        if PLATFORM_NAME == 'linux' or PLATFORM_NAME == 'darwin':
+            return 'liboidbridge.so'
         elif PLATFORM_NAME == 'windows':
-            return 'liboidbridge%s.dll' % python_version
+            return 'oidbridge.dll'
+        return None
 
     def plot_variable(self, requested_symbol):
         """
@@ -104,8 +107,7 @@ class OpenImageDebuggerWindow(object):
         that it can schedule its execution in a thread safe context.
         """
         if self._bridge is None:
-            print('[OpenImageDebugger] Could not plot symbol %s: Not a debugging'
-                  ' session.' % requested_symbol)
+            log.info(f"Could not plot symbol {requested_symbol}: Not a debugging session")
             return 0
 
         try:
@@ -121,8 +123,8 @@ class OpenImageDebuggerWindow(object):
             self._bridge.queue_request(plot_callable)
             return 1
         except Exception as err:
-            print('[OpenImageDebugger] Error: Could not plot variable')
-            print(err)
+            log.error('Could not plot variable')
+            log.error(err)
 
         return 0
 
@@ -214,6 +216,6 @@ class DeferredVariablePlotter(object):
 
         except Exception as err:
             import traceback
-            print('[OpenImageDebugger] Error: Could not plot variable')
-            print(err)
+            log.error("Could not plot variable")
+            log.error(err)
             traceback.print_exc()

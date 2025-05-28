@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,33 +26,38 @@
 #ifndef GO_TO_WIDGET_H_
 #define GO_TO_WIDGET_H_
 
-#include <QLineEdit>
-#include <QWidget>
+#include <memory>
+
+
+#include <qwidget.h>
+
 
 #include "decorated_line_edit.h"
 
+namespace oid
+{
 
-class GoToWidget : public QWidget
+class GoToWidget final : public QWidget
 {
     Q_OBJECT
 
   public:
     explicit GoToWidget(QWidget* parent = nullptr);
     void toggle_visible();
-    void set_defaults(float default_x, float default_y);
+    void set_defaults(float default_x, float default_y) const;
 
   Q_SIGNALS:
     void go_to_requested(float x, float y);
 
-  public Q_SLOTS:
-
   protected:
-    void keyPressEvent(QKeyEvent* e);
+    void keyPressEvent(QKeyEvent* e) override;
 
 
   private:
-    DecoratedLineEdit* x_coordinate_;
-    DecoratedLineEdit* y_coordinate_;
+    std::unique_ptr<DecoratedLineEdit> x_coordinate_{};
+    std::unique_ptr<DecoratedLineEdit> y_coordinate_{};
 };
+
+} // namespace oid
 
 #endif // GO_TO_WIDGET_H_

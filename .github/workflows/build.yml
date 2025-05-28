@@ -1,0 +1,112 @@
+# The MIT License (MIT)
+
+# Copyright (c) 2015-2025 OpenImageDebugger contributors
+# (https://github.com/OpenImageDebugger/OpenImageDebugger)
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+name: Build
+
+on:
+  pull_request:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          [
+            ubuntu-22.04,
+            ubuntu-24.04,
+            macos-14,
+            macos-15,
+          ]
+        ccache-variant: [ccache]
+        include:
+          - os: ubuntu-22.04
+            container: ghcr.io/openimagedebugger/oid:22.04
+          - os: ubuntu-24.04
+            container: ghcr.io/openimagedebugger/oid:24.04
+          - os: windows-2022
+            ccache-variant: "sccache"
+          - os: windows-2025
+            ccache-variant: "sccache"
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        with:
+          fetch-depth: 1
+          fetch-tags: true
+          submodules: "recursive"
+          # see https://github.com/orgs/community/discussions/25702#discussioncomment-6313966
+          persist-credentials: false
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@63069e3931dedbf3b63792097479563182fe70d1 # 1.2.18
+        with:
+          verbose: 1
+          key: ${{matrix.os}}-${{github.ref_name}}
+          restore-keys: |
+            ${{matrix.os}}-main
+          append-timestamp: true
+          variant: ${{ matrix.ccache-variant }}
+
+      # Needed for ninja to work with msvc
+      - if: contains(matrix.os, 'windows')
+        name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # 1.13.0
+
+      - if: contains(matrix.os, 'windows')
+        name: Install Qt (Windows)
+        uses: jurplel/install-qt-action@12aa0336e1e410b3c6dff5e0722547f7a37e8c60 # 4.2.1
+        with:
+          version: "5.15.2"
+          aqtversion: "==3.1.*"
+          setup-python: false
+          cache: true
+
+      - if: contains(matrix.os, 'macos')
+        name: Install Qt (macOS)
+        run: |
+          brew install qt@5
+          echo "PATH=/opt/homebrew/opt/qt@5/bin:$PATH" >> "$GITHUB_ENV"
+
+      - name: Build
+        shell: bash
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ${{ matrix.ccache-variant }}
+          CMAKE_CXX_COMPILER_LAUNCHER: ${{ matrix.ccache-variant }}
+        # see https://stackoverflow.com/a/24470998/5843895 and https://cliutils.gitlab.io/modern-cmake/chapters/intro/running.html
+        run: |
+          cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_INSTALL_PREFIX=out -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release --target install
+
+      - name: Tar files
+        shell: bash
+        run: tar --strip-components 1 -cvf build-${{ matrix.os }}.tar out
+
+      - name: Upload build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
+        with:
+          name: build-${{ matrix.os }}
+          path: build-${{ matrix.os }}.tar

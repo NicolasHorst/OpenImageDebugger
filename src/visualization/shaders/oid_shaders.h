@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,16 +27,16 @@
 #define OID_SHADERS_H_
 
 
-namespace shader
+namespace oid::shader
 {
 
-extern const char* buff_frag_shader;
-extern const char* buff_vert_shader;
-extern const char* text_frag_shader;
-extern const char* text_vert_shader;
-extern const char* background_vert_shader;
-extern const char* background_frag_shader;
+extern const char* const buff_frag_shader;
+extern const char* const buff_vert_shader;
+extern const char* const text_frag_shader;
+extern const char* const text_vert_shader;
+extern const char* const background_vert_shader;
+extern const char* const background_frag_shader;
 
-} // namespace shader
+} // namespace oid::shader
 
 #endif // OID_SHADERS_H_

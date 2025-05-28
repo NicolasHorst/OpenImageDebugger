@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,134 +23,93 @@
  * IN THE SOFTWARE.
  */
 
-#include <iostream>
-
 #include "linear_algebra.h"
 
+#include <iostream>
 
-vec4::vec4()
+
+namespace oid
 {
-}
 
 
-vec4::vec4(float x, float y, float z, float w)
-    : vec(x, y, z, w)
+vec4::vec4(const float x, const float y, const float z, const float w)
+    : vec_{x, y, z, w}
 {
-}
-
-vec4::vec4(const vec4& b)
-{
-    vec = b.vec;
-}
-
-
-vec4& vec4::operator=(const vec4& b)
-{
-    if (this != &b) {
-        vec = b.vec;
-    }
-    return *this;
 }
 
 
 vec4& vec4::operator+=(const vec4& b)
 {
-    for (int i = 0; i < 4; ++i)
-        vec[i] += b.vec[i];
+    for (int i = 0; i < 4; ++i) {
+        vec_[i] += b.vec_[i];
+    }
     return *this;
-}
-
-
-vec4 vec4::operator+(const vec4& b) const
-{
-    return vec4(vec[0] + b.vec[0],
-                vec[1] + b.vec[1],
-                vec[2] + b.vec[2],
-                vec[3] + b.vec[3]);
-}
-
-
-vec4 vec4::operator-(const vec4& b) const
-{
-    return vec4(vec[0] - b.vec[0],
-                vec[1] - b.vec[1],
-                vec[2] - b.vec[2],
-                vec[3] - b.vec[3]);
-}
-
-
-vec4 vec4::operator*(float scalar) const
-{
-    vec4 result(*this);
-    result.vec *= scalar;
-
-    return result;
 }
 
 
 void vec4::print() const
 {
-    std::cout << vec.transpose() << std::endl;
+    std::cout << vec_.transpose() << std::endl;
 }
 
 
 float* vec4::data()
 {
-    return vec.data();
+    return vec_.data();
 }
 
 
 float& vec4::x()
 {
-    return vec[0];
+    return vec_[0];
 }
 
 
 float& vec4::y()
 {
-    return vec[1];
+    return vec_[1];
 }
 
 
 float& vec4::z()
 {
-    return vec[2];
+    return vec_[2];
 }
 
 
 float& vec4::w()
 {
-    return vec[3];
+    return vec_[3];
 }
 
 
 const float& vec4::x() const
 {
-    return vec[0];
+    return vec_[0];
 }
 
 
 const float& vec4::y() const
 {
-    return vec[1];
+    return vec_[1];
 }
 
 
 const float& vec4::z() const
 {
-    return vec[2];
+    return vec_[2];
 }
 
 
 const float& vec4::w() const
 {
-    return vec[3];
+    return vec_[3];
 }
 
 
 vec4 vec4::zero()
 {
-    return vec4(0, 0, 0, 0);
+    return {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 
@@ -164,49 +123,53 @@ void mat4::set_identity()
 {
     // clang-format off
     *this << std::initializer_list<float>{
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
     };
     // clang-format on
 }
 
 
-void mat4::set_from_st(float scaleX,
-                       float scaleY,
-                       float scaleZ,
-                       float x,
-                       float y,
-                       float z)
+void mat4::set_from_st(const float scaleX,
+                       const float scaleY,
+                       const float scaleZ,
+                       const float x,
+                       const float y,
+                       const float z)
 {
     float* data = this->data();
 
-    data[0] = scaleX, data[5] = scaleY, data[10] = scaleZ;
-    data[12] = x, data[13] = y, data[14] = z;
+    data[0]  = scaleX;
+    data[5]  = scaleY;
+    data[10] = scaleZ;
+    data[12] = x;
+    data[13] = y;
+    data[14] = z;
 
-    data[1] = data[2] = data[3] = data[4] = 0.0;
-    data[6] = data[7] = data[8] = data[9] = 0.0;
-    data[11]                              = 0.0;
-    data[15]                              = 1.0;
+    data[1] = data[2] = data[3] = data[4] = 0.0f;
+    data[6] = data[7] = data[8] = data[9] = 0.0f;
+    data[11]                              = 0.0f;
+    data[15]                              = 1.0f;
 }
 
 
-void mat4::set_from_srt(float scaleX,
-                        float scaleY,
-                        float scaleZ,
-                        float rZ,
-                        float x,
-                        float y,
-                        float z)
+void mat4::set_from_srt(const float scaleX,
+                        const float scaleY,
+                        const float scaleZ,
+                        const float rZ,
+                        const float x,
+                        const float y,
+                        const float z)
 {
     using Eigen::Affine3f;
     using Eigen::AngleAxisf;
     using Eigen::Vector3f;
 
-    Affine3f t = Affine3f::Identity();
+    auto t = Affine3f::Identity();
     t.translate(Vector3f(x, y, z))
-        .rotate(AngleAxisf(rZ, Vector3f(0, 0, 1)))
+        .rotate(AngleAxisf(rZ, Vector3f(0.0f, 0.0f, 1.0f)))
         .scale(Vector3f(scaleX, scaleY, scaleZ));
     this->mat_ = t.matrix();
 }
@@ -224,15 +187,15 @@ void mat4::operator<<(const std::initializer_list<float>& data)
 }
 
 
-mat4 mat4::rotation(float angle)
+mat4 mat4::rotation(const float angle)
 {
     using Eigen::Affine3f;
     using Eigen::AngleAxisf;
     using Eigen::Vector3f;
 
-    mat4 result;
-    Affine3f t = Affine3f::Identity();
-    t.rotate(AngleAxisf(angle, Vector3f(0, 0, 1)));
+    auto result = mat4{};
+    auto t      = Affine3f::Identity();
+    t.rotate(AngleAxisf(angle, Vector3f(0.0f, 0.0f, 1.0f)));
 
     result.mat_ = t.matrix();
     return result;
@@ -244,9 +207,9 @@ mat4 mat4::translation(const vec4& vector)
     using Eigen::Affine3f;
     using Eigen::Vector3f;
 
-    mat4 result;
+    auto result = mat4{};
 
-    Affine3f t = Affine3f::Identity();
+    auto t = Affine3f::Identity();
     t.translate(Vector3f(vector.x(), vector.y(), vector.z()));
     result.mat_ = t.matrix();
 
@@ -259,9 +222,9 @@ mat4 mat4::scale(const vec4& factor)
     using Eigen::Affine3f;
     using Eigen::Vector3f;
 
-    mat4 result;
+    auto result = mat4{};
 
-    Affine3f t = Affine3f::Identity();
+    auto t = Affine3f::Identity();
     t.scale(Vector3f(factor.x(), factor.y(), factor.z()));
     result.mat_ = t.matrix();
 
@@ -269,19 +232,22 @@ mat4 mat4::scale(const vec4& factor)
 }
 
 
-void mat4::set_ortho_projection(float right, float top, float near, float far)
+void mat4::set_ortho_projection(const float right,
+                                const float top,
+                                const float near,
+                                const float far)
 {
-    float* data = this->data();
+    const auto data = this->data();
 
-    data[0]  = 1.0 / right;
-    data[5]  = -1.0 / top;
-    data[10] = -2.0 / (far - near);
+    data[0]  = 1.0f / right;
+    data[5]  = -1.0f / top;
+    data[10] = -2.0f / (far - near);
     data[14] = -(far + near) / (far - near);
 
-    data[1] = data[2] = data[3] = data[4] = 0.0;
-    data[6] = data[7] = data[8] = data[9] = 0.0;
-    data[11] = data[12] = data[13] = 0.0;
-    data[15]                       = 1.0;
+    data[1] = data[2] = data[3] = data[4] = 0.0f;
+    data[6] = data[7] = data[8] = data[9] = 0.0f;
+    data[11] = data[12] = data[13] = 0.0f;
+    data[15]                       = 1.0f;
 }
 
 
@@ -293,32 +259,24 @@ void mat4::print() const
 
 mat4 mat4::inv() const
 {
-    mat4 res;
-    res.mat_ = this->mat_.inverse();
+    auto result = mat4{};
+    result.mat_ = this->mat_.inverse();
 
-    return res;
+    return result;
 }
 
 
-vec4 mat4::operator*(const vec4& b) const
+float& mat4::operator()(const int row, const int col)
 {
-    vec4 res;
-    res.vec = this->mat_ * b.vec;
-
-    return res;
-}
-
-
-float&mat4::operator()(int row, int col) {
     return mat_(row, col);
 }
 
-
-mat4 mat4::operator*(const mat4& b) const
+vec4 mat4::operator*(const vec4& vec) const
 {
-    mat4 res;
+    auto result = vec4{};
+    result.vec_ = this->mat_ * vec.vec_;
 
-    res.mat_ = this->mat_ * b.mat_;
-
-    return res;
+    return result;
 }
+
+} // namespace oid

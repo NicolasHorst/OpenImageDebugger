@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2021 OpenImageDebugger
+ * Copyright (c) 2015-2025 OpenImageDebugger
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,47 +24,55 @@
  */
 
 #include "process_impl.h"
+
 #include "process.h"
 
-#include <signal.h>
+#include <csignal>
 #include <spawn.h>
 
-#include <memory>
+extern char** environ;
 
-using namespace std;
+namespace oid
+{
 
 class ProcessImplUnix final : public ProcessImpl
 {
-public:
+  public:
     ProcessImplUnix() = default;
 
-    ~ProcessImplUnix() noexcept
+    ProcessImplUnix(const ProcessImplUnix&) = delete;
+
+    ProcessImplUnix(ProcessImplUnix&& other) noexcept = delete;
+
+    ProcessImplUnix& operator=(const ProcessImplUnix&) = delete;
+
+    ProcessImplUnix& operator=(ProcessImplUnix&& other) noexcept = delete;
+
+    ~ProcessImplUnix() noexcept override
     {
         kill();
     }
 
-    void start(const std::vector<std::string>& command) override
+    void start(std::vector<std::string>& command) override
     {
-        const auto windowBinaryPath = command[0];
+        const auto& windowBinaryPath = command[0];
 
-        vector<char*> argv;
+        auto argv = std::vector<char*>{};
         argv.reserve(command.size());
-        for (size_t i = 1; i < command.size(); i++) {
-            argv.push_back(const_cast<char*>(command[i].c_str()));
+        for (auto& arg : command) {
+            argv.push_back(arg.data());
         }
         argv.push_back(nullptr);
-
-        extern char** environ;
 
         posix_spawn(&pid_,
                     windowBinaryPath.c_str(),
                     nullptr, // TODO consider passing something here
                     nullptr, // and here
-                    &argv[0],
+                    argv.data(),
                     environ);
     }
 
-    bool isRunning() const override
+    [[nodiscard]] bool isRunning() const override
     {
         return pid_ != 0 && ::kill(pid_, 0) == 0;
     }
@@ -74,11 +82,13 @@ public:
         ::kill(pid_, SIGTERM);
     }
 
-private:
+  private:
     pid_t pid_{0};
 };
 
 void Process::createImpl()
 {
-    impl_ = make_shared<ProcessImplUnix>();
+    impl_ = std::make_shared<ProcessImplUnix>();
 }
+
+} // namespace oid

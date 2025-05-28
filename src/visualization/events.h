@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2024 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +28,12 @@
 
 #include <set>
 
-enum class EventProcessCode { IGNORED, INTERCEPTED };
+#include <QEvent>
 
-class MainWindow;
-class QEvent;
+namespace oid
+{
+
+enum class EventProcessCode { IGNORED, INTERCEPTED };
 
 class KeyboardState
 {
@@ -50,5 +52,7 @@ class KeyboardState
 
     static std::set<int> pressed_keys_;
 };
+
+} // namespace oid
 
 #endif // EVENTS_H_

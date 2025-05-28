@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,17 +23,17 @@
  * IN THE SOFTWARE.
  */
 
-namespace shader
+namespace oid::shader
 {
-
-const char* buff_frag_shader = R"(
+extern auto const buff_frag_shader{R"glsl(
 
 uniform sampler2D sampler;
 uniform vec4 brightness_contrast[2];
 uniform vec2 buffer_dimension;
 uniform int enable_borders;
+uniform int enable_icon_mode;
 
-// Ouput data
+// Output data
 varying vec2 uv;
 
 void main()
@@ -65,7 +65,7 @@ void main()
 
     vec2 buffer_position = uv * buffer_dimension;
 
-    if(enable_borders == 1) {
+    if(enable_icon_mode == 0 && enable_borders != 0) {
         float alpha = max(abs(dFdx(buffer_position.x)),
                           abs(dFdx(buffer_position.y)));
 
@@ -78,13 +78,16 @@ void main()
         float horizontal_border = clamp(abs(-1.0 / alpha * y_ + 0.5 / alpha) -
                                            (0.5 / alpha - 1.0), 0.0, 1.0);
 
-        color.rgb += vec3(vertical_border +
-                          horizontal_border);
+        float ratio_a = max(vertical_border, horizontal_border);
+        float ratio_b = 1.0 - ratio_a;
+
+        color.r = color.r * ratio_b + 0.5 * ratio_a;
+        color.g = color.g * ratio_b + 0.5 * ratio_a;
+        color.b = color.b * ratio_b + 0.5 * ratio_a;
     }
 
     gl_FragColor = color.PIXEL_LAYOUT;
 }
 
-)";
-
-} // namespace shader
+)glsl"};
+} // namespace oid::shader

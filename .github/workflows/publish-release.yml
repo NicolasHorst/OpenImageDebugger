@@ -1,0 +1,71 @@
+# The MIT License (MIT)
+
+# Copyright (c) 2015-2025 OpenImageDebugger contributors
+# (https://github.com/OpenImageDebugger/OpenImageDebugger)
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+name: Publish release
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    # pushes done by a workflow won't trigger on.push without a GH PAT. Using on.workflow_run instead.
+    # see:
+    #   - https://github.com/orgs/community/discussions/25702
+    #   - https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
+    workflows: [Dependabot auto-approve]
+    types: [completed]
+
+jobs:
+  bump:
+    uses: ./.github/workflows/commisery-bump.yml
+  build-all:
+    needs: [bump]
+    if: needs.bump.outputs.next-version != ''
+    uses: ./.github/workflows/build.yml
+  publish-release:
+    needs: [build-all, bump]
+    if: needs.bump.outputs.next-version != ''
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          [
+            ubuntu-22.04,
+            ubuntu-24.04,
+            macos-14,
+            macos-15,
+            windows-2022,
+            windows-2025,
+          ]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # 4.3.0
+        with:
+          name: build-${{ matrix.os }}
+          path: artifacts
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # 2.2.2
+        with:
+          tag_name: ${{ needs.bump.outputs.next-version }}
+          files: artifacts/build-${{ matrix.os }}.tar

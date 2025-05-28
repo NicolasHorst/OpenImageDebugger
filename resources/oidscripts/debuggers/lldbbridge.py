@@ -143,11 +143,11 @@ class LldbBridge(BridgeInterface):
 
         # Check if buffer is initialized
         if buffer_metadata['pointer'] == 0x0:
-            raise Exception('Invalid null buffer pointer')
+            raise RuntimeError('Invalid null buffer pointer')
         if bufsize == 0:
-            raise Exception('Invalid buffer of zero bytes')
+            raise ValueError('Invalid buffer of zero bytes')
         elif bufsize >= sysinfo.get_available_memory() / 10:
-            raise Exception('Invalid buffer size larger than available memory')
+            raise MemoryError('Invalid buffer size larger than available memory')
 
         buffer_metadata['variable_name'] = variable
         buffer_metadata['pointer'] = memoryview(process.ReadMemory(
@@ -162,8 +162,10 @@ class LldbBridge(BridgeInterface):
         return lldb_object.get_casted_pointer()
 
     def _get_observable_children_members(self, symbol, member_name_chain,
-                                         output_set, visited_typenames=set()):
+                                         output_set, visited_typenames=None):
         # type: (lldb.SBValue, list[str], set, set) -> None
+        if visited_typenames is None:
+            visited_typenames = set()
         if symbol.GetTypeName() in visited_typenames:
             # Prevent endless recursion in cyclic data types
             return
@@ -173,7 +175,7 @@ class LldbBridge(BridgeInterface):
                 member_idx)  # type: lldb.SBValue
 
             member_name_chain_current = member_name_chain.copy()
-            member_name_chain_current.append(symbol_member.name)
+            member_name_chain_current.append(str(symbol_member.name))
 
             symbol_wrapper = SymbolWrapper(symbol_member)
             if self._type_bridge.is_symbol_observable(symbol_wrapper,
@@ -231,20 +233,13 @@ class SymbolWrapper(DebuggerSymbolReference):
         return float(string_value)
 
     def __getitem__(self, member):
-        num_children = self._symbol.GetNumChildren()
-        if isinstance(member, int):
-            invalid_member_requested = member > num_children
-            get_symbol_child = self._symbol.GetChildAtIndex
-        elif isinstance(member, str):
-            invalid_member_requested = self._symbol.GetChildMemberWithName(
-                member).name == None
-            get_symbol_child = self._symbol.GetChildMemberWithName
+        child = self._symbol.GetChildAtIndex(member) if isinstance(member, int) \
+                else self._symbol.GetChildMemberWithName(str(member))
 
-        if invalid_member_requested:
+        if not child.IsValid():
             raise KeyError
 
-        symbol_child = get_symbol_child(member)
-        return SymbolWrapper(symbol_child)
+        return SymbolWrapper(child)
 
     def get_casted_pointer(self):
         if self._symbol.TypeIsPointerType():

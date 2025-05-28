@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,34 +26,43 @@
 #ifndef BUFFER_VALUES_H_
 #define BUFFER_VALUES_H_
 
-#include <iostream>
-
-#include <QFont>
-
 #include "component.h"
-#include "ui/gl_text_renderer.h"
+#include "visualization/components/buffer.h"
 
-class BufferValues : public Component
+namespace oid
+{
+
+class BufferValues final : public Component
 {
   public:
-    BufferValues(GameObject* game_object,
-                 GLCanvas* gl_canvas);
+    BufferValues(GameObject* game_object, GLCanvas* gl_canvas);
 
-    virtual ~BufferValues();
+    ~BufferValues() override;
 
-    virtual void update()
+    void update() override
     {
+        // Do nothing
     }
 
-    virtual int render_index() const;
+    [[nodiscard]] int render_index() const override;
 
-    virtual void draw(const mat4& projection, const mat4& view_inv);
+    void draw(const mat4& projection, const mat4& view_inv) override;
+    void decrease_float_precision();
+    void increase_float_precision();
+    int get_float_precision() const;
 
   private:
-    float text_pixel_scale         = 1.0;
-    static float constexpr padding = 0.125f; // Must be smaller than 0.5
+    static float constexpr padding_{0.125f}; // Must be smaller than 0.5
 
-    void generate_glyphs_texture();
+    static int constexpr max_float_precision_{10};
+
+    static int constexpr min_float_precision_{3};
+
+    static float constexpr default_text_scale_{1.0f};
+
+    int float_precision_{min_float_precision_};
+
+    float text_pixel_scale_{default_text_scale_};
 
     void draw_text(const mat4& projection,
                    const mat4& view_inv,
@@ -63,6 +72,18 @@ class BufferValues : public Component
                    float y,
                    float y_offset,
                    float channels);
+
+    void draw_pixel_values(const int& x,
+                           const int& y,
+                           const Buffer& buffer,
+                           const int& pos_center_x,
+                           const int& pos_center_y,
+                           const std::array<float, 4>& recenter_factors,
+                           const mat4& projection,
+                           const mat4& view_inv,
+                           const mat4& buffer_pose);
 };
+
+} // namespace oid
 
 #endif // BUFFER_VALUES_H_

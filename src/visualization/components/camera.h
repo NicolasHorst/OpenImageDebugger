@@ -1,16 +1,43 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
+ * (https://github.com/OpenImageDebugger/OpenImageDebugger)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
 #ifndef CAMERA_H_
 #define CAMERA_H_
 
 #include "component.h"
 #include "math/linear_algebra.h"
 
+namespace oid
+{
 
-class Camera : public Component
+class Camera final : public Component
 {
   public:
     Camera(GameObject* game_object, GLCanvas* gl_canvas);
 
-    ~Camera() = default;
+    ~Camera() override = default;
 
     Camera(const Camera& cam);
 
@@ -20,22 +47,24 @@ class Camera : public Component
 
     Camera& operator=(Camera&& cam) = default;
 
-    static constexpr float zoom_factor = 1.1;
-    mat4 projection;
+    static constexpr float zoom_factor{1.1f};
 
-    vec4 mouse_position = vec4::zero();
+    mat4 projection{};
 
-    virtual void update();
+    vec4 mouse_position{vec4::zero()};
 
-    virtual void draw(const mat4&, const mat4&)
+    void update() override;
+
+    void draw(const mat4&, const mat4&) override
     {
+        // Do nothing
     }
 
-    virtual bool post_buffer_update();
+    bool post_buffer_update() override;
 
-    virtual bool post_initialize();
+    bool post_initialize() override;
 
-    virtual EventProcessCode key_press_event(int key_code);
+    EventProcessCode key_press_event(int key_code) override;
 
     void window_resized(int w, int h);
 
@@ -43,16 +72,18 @@ class Camera : public Component
 
     void recenter_camera();
 
-    void mouse_drag_event(int mouse_x, int mouse_y);
+    void mouse_drag_event(int mouse_x, int mouse_y) override;
 
-    float compute_zoom();
+    [[nodiscard]] float compute_zoom() const;
 
     void move_to(float x, float y);
 
-    vec4 get_position();
+    [[nodiscard]] vec4 get_position() const;
 
-private:
-    void update_object_pose();
+  private:
+    void update_object_pose() const;
+
+    [[nodiscard]] std::pair<float, float> get_buffer_initial_dimensions() const;
 
     void scale_at(const vec4& center_ndc, float delta);
 
@@ -60,14 +91,16 @@ private:
 
     void handle_key_events();
 
-    float zoom_power_   = 0.0f;
-    float camera_pos_x_ = 0.0f;
-    float camera_pos_y_ = 0.0f;
+    float zoom_power_{0.0f};
+    float camera_pos_x_{0.0f};
+    float camera_pos_y_{0.0f};
 
-    int canvas_width_;
-    int canvas_height_;
+    int canvas_width_{0};
+    int canvas_height_{0};
 
-    mat4 scale_;
+    mat4 scale_{};
 };
+
+} // namespace oid
 
 #endif // CAMERA_H_

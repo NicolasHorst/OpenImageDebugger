@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,27 +29,40 @@
 #include "component.h"
 #include "visualization/shader.h"
 
+namespace oid
+{
 
-class Background : public Component
+class Background final : public Component
 {
   public:
     Background(GameObject* game_object, GLCanvas* gl_canvas);
 
-    virtual ~Background();
+    ~Background() override;
 
-    virtual bool initialize();
+    Background(const Background&) = delete;
 
-    virtual void update()
+    Background& operator=(const Background&) = delete;
+
+    Background(Background&&) = delete;
+
+    Background& operator=(Background&&) = delete;
+
+    bool initialize() override;
+
+    void update() override
     {
+        // Do nothing
     }
 
-    virtual void draw(const mat4& projection, const mat4& view_inv);
+    void draw(const mat4& projection, const mat4& view_inv) override;
 
-    virtual int render_index() const;
+    [[nodiscard]] int render_index() const override;
 
   private:
-    ShaderProgram background_prog;
-    GLuint background_vbo;
+    ShaderProgram background_prog{nullptr};
+    GLuint background_vbo{0};
 };
+
+} // namespace oid
 
 #endif // BACKGROUND_H_

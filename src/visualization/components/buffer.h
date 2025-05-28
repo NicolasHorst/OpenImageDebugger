@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,40 +26,52 @@
 #ifndef BUFFER_H_
 #define BUFFER_H_
 
+#include <array>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "component.h"
+#include "ipc/raw_data_decode.h"
 #include "visualization/shader.h"
-#include "ipc/message_exchange.h"
 
+namespace oid
+{
 
-class Buffer : public Component
+class Buffer final : public Component
 {
   public:
     Buffer(GameObject* game_object, GLCanvas* gl_canvas);
 
-    const int max_texture_size = 2048;
+    ~Buffer() override;
 
-    std::vector<GLuint> buff_tex;
+    Buffer(const Buffer&) = delete;
 
-    static const float no_ac_params[8];
+    Buffer& operator=(const Buffer&) = delete;
 
-    float buffer_width_f;
-    float buffer_height_f;
+    Buffer(Buffer&&) = delete;
 
-    int channels;
-    int step;
+    Buffer& operator=(Buffer&&) = delete;
 
-    BufferType type;
+    static constexpr int max_texture_size = 2048;
 
-    const uint8_t* buffer;
+    std::vector<GLuint> buff_tex{};
 
-    bool transpose;
+    static const std::array<float, 8> no_ac_params;
 
-    ~Buffer();
+    float buffer_width_f{};
+    float buffer_height_f{};
 
-    bool buffer_update();
+    int channels{};
+    int step{};
+
+    BufferType type{BufferType::UnsignedByte};
+
+    const std::uint8_t* buffer{};
+
+    bool transpose{};
+
+    bool buffer_update() override;
 
     void recompute_min_color_values();
 
@@ -69,54 +81,65 @@ class Buffer : public Component
 
     void compute_contrast_brightness_parameters();
 
-    int sub_texture_id_at_coord(int x, int y);
+    [[nodiscard]] int sub_texture_id_at_coord(int x, int y) const;
 
     void set_pixel_layout(const std::string& pixel_layout);
 
-    const char* get_pixel_layout() const;
+    [[nodiscard]] const char* get_pixel_layout() const;
 
-    float tile_coord_x(int x);
-    float tile_coord_y(int y);
+    [[nodiscard]] float tile_coord_x(int x) const;
+    [[nodiscard]] float tile_coord_y(int y) const;
 
-    bool initialize();
+    bool initialize() override;
 
-    void update();
+    void update() override;
 
-    void draw(const mat4& projection, const mat4& viewInv);
+    void draw(const mat4& projection, const mat4& viewInv) override;
 
-    int num_textures_x;
-    int num_textures_y;
+    int num_textures_x{};
+    int num_textures_y{};
 
     float* min_buffer_values();
 
     float* max_buffer_values();
 
-    const float* auto_buffer_contrast_brightness() const;
+    [[nodiscard]] const float* auto_buffer_contrast_brightness() const;
 
-    void set_min_buffer_values();
-    void set_max_buffer_values();
-
-    void get_pixel_info(std::stringstream& output, int x, int y);
+    void get_pixel_info(std::stringstream& message, int x, int y) const;
 
     void rotate(float angle);
+
+    void set_icon_drawing_mode(bool is_enabled) const;
 
   private:
     void create_shader_program();
 
     void setup_gl_buffer();
 
-    void update_object_pose();
+    void update_object_pose() const;
 
-    char pixel_layout_[4] = {'r', 'g', 'b', 'a'};
+    void update_min_color_value(float* lowest, const int i, const int c) const;
 
-    float min_buffer_values_[4];
-    float max_buffer_values_[4];
-    float auto_buffer_contrast_brightness_[8] =
-        {1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0};
-    float angle_ = 0.f;
+    void update_max_color_value(float* upper, const int i, const int c) const;
 
-    ShaderProgram buff_prog;
-    GLuint vbo;
+    std::string pixel_layout_{'r', 'g', 'b', 'a'};
+
+    std::array<float, 4> min_buffer_values_{};
+    std::array<float, 4> max_buffer_values_{};
+    std::array<float, 8> auto_buffer_contrast_brightness_{1.0f,
+                                                          1.0f,
+                                                          1.0f,
+                                                          1.0f,
+                                                          0.0f,
+                                                          0.0f,
+                                                          0.0f,
+                                                          0.0f};
+    float angle_{0.0f};
+
+    ShaderProgram buff_prog_{nullptr};
+    GLuint vbo_{};
 };
+
+} // namespace oid
 
 #endif // BUFFER_H_

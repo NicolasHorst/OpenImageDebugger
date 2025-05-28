@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,10 +23,9 @@
  * IN THE SOFTWARE.
  */
 
-namespace shader
+namespace oid::shader
 {
-
-const char* text_frag_shader = R"(
+extern auto const text_frag_shader{R"glsl(
 
 uniform sampler2D buff_sampler;
 uniform sampler2D text_sampler;
@@ -34,7 +33,7 @@ uniform vec2 pix_coord;
 uniform vec4 brightness_contrast[2];
 
 
-// Ouput data
+// Output data
 varying vec2 uv;
 
 
@@ -68,6 +67,5 @@ void main()
     gl_FragColor = color;
 }
 
-)";
-
-} // namespace shader
+)glsl"};
+} // namespace oid::shader

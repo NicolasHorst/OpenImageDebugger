@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,6 +31,9 @@
 
 #include <vector> // for std::vector
 
+namespace oid
+{
+
 enum class BufferType {
     UnsignedByte  = 0,
     UnsignedShort = 2,
@@ -41,8 +44,10 @@ enum class BufferType {
 };
 
 std::vector<std::uint8_t>
-    make_float_buffer_from_double(const std::vector<std::uint8_t>& buff_double);
+make_float_buffer_from_double(const std::vector<std::uint8_t>& buff_double);
 
-std::size_t typesize(BufferType type);
+std::size_t type_size(BufferType type);
+
+} // namespace oid
 
 #endif // RAW_DATA_DECODE_H_

@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger
+ * Copyright (c) 2015-2025 OpenImageDebugger
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,38 +23,40 @@
  * IN THE SOFTWARE.
  */
 
+#include "process.h"
+
 #include <string>
 #include <vector>
 
-#include "process.h"
 #include "process_impl.h"
+
+namespace oid
+{
 
 Process::Process()
 {
     createImpl();
 }
 
-void Process::start(const std::vector<std::string>& command)
+void Process::start(std::vector<std::string>& command) const
 {
     impl_->start(command);
 }
 
 
-bool Process::isRunning()
+bool Process::isRunning() const
 {
     return impl_->isRunning();
 }
 
-void Process::kill()
+void Process::kill() const
 {
     impl_->kill();
 }
 
-void Process::waitForStart()
+void Process::waitForStart() const
 {
-    for (;;) {
-        if (impl_->isRunning()) {
-            break;
-        }
-    }
+    while (!impl_->isRunning());
 }
+
+} // namespace oid

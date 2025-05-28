@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,12 +26,15 @@
 #ifndef COMPONENT_H_
 #define COMPONENT_H_
 
+#include "math/linear_algebra.h"
+#include "ui/gl_canvas.h"
 #include "visualization/events.h"
 
-class GameObject;
-class GLCanvas;
-class mat4;
 
+namespace oid
+{
+
+class GameObject;
 
 class Component
 {
@@ -44,7 +47,7 @@ class Component
 
     virtual bool post_buffer_update();
 
-    virtual int render_index() const;
+    [[nodiscard]] virtual int render_index() const;
 
     // Called after all components are initialized
     virtual bool post_initialize();
@@ -62,18 +65,20 @@ class Component
 
     virtual void mouse_drag_event(int /* mouse_x */, int /* mouse_y */)
     {
+        // Do nothing
     }
 
     virtual void mouse_move_event(int /* mouse_x */, int /* mouse_y */)
     {
+        // Do nothing
     }
 
     virtual ~Component();
 
-  protected:
-    GameObject* game_object_;
+    GameObject* game_object_{};
 
-    GLCanvas* gl_canvas_;
+    GLCanvas* gl_canvas_{};
 };
 
+} // namespace oid
 #endif // COMPONENT_H_

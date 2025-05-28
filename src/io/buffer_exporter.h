@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,17 +26,19 @@
 #ifndef BUFFER_EXPORTER_H_
 #define BUFFER_EXPORTER_H_
 
+#include <string>
+
 #include "visualization/components/buffer.h"
 
-
-class BufferExporter
+namespace oid::BufferExporter
 {
-  public:
-    enum class OutputType { Bitmap, OctaveMatrix };
 
-    static void export_buffer(const Buffer* buffer,
-                              const std::string& path,
-                              OutputType type);
-};
+enum class OutputType { Bitmap, OctaveMatrix };
+
+void export_buffer(const Buffer* buffer,
+                   const std::string& path,
+                   OutputType type);
+
+} // namespace oid::BufferExporter
 
 #endif // BUFFER_EXPORTER_H_

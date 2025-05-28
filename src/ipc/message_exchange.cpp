@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,16 +23,17 @@
  * IN THE SOFTWARE.
  */
 
-#include <iostream>
-
 #include "message_exchange.h"
 
-MessageBlock::~MessageBlock()
-{
-}
+#include <utility>
 
-StringBlock::StringBlock(const std::string &value)
-    : data_(value)
+namespace oid
+{
+
+MessageBlock::~MessageBlock() = default;
+
+StringBlock::StringBlock(std::string value)
+    : data_{std::move(value)}
 {
 }
 
@@ -41,7 +42,9 @@ size_t StringBlock::size() const
     return data_.size();
 }
 
-const uint8_t *StringBlock::data() const
+const uint8_t* StringBlock::data() const
 {
     return reinterpret_cast<const uint8_t*>(data_.data());
 }
+
+} // namespace oid

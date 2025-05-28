@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 
-# Copyright (c) 2015-2021 OpenImageDebugger contributors
+# Copyright (c) 2015-2024 OpenImageDebugger contributors
 # (https://github.com/OpenImageDebugger/OpenImageDebugger)
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,22 +21,12 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.22.1)
 
 project(OpenImageDebugger)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
 
 add_subdirectory(src)
-
-if(APPLE)
-    message(STATUS "Python2 is unavailable on MacOS")
-else()
-    add_subdirectory(src/oidbridge/python2)
-endif()
-
-if(WIN32)
-    message(WARNING "Python3 is currently not supported on Windows")
-else()
-    add_subdirectory(src/oidbridge/python3)
-endif()
+add_subdirectory(src/ipc)
+add_subdirectory(src/oidbridge)

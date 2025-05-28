@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,12 +26,16 @@
 #ifndef IPC_MESSAGE_EXCHANGE_H_
 #define IPC_MESSAGE_EXCHANGE_H_
 
+#include <bit>
 #include <deque>
 #include <memory>
 
 #include <QTcpSocket>
 
 #include "raw_data_decode.h"
+
+namespace oid
+{
 
 enum class MessageType {
     GetObservedSymbols         = 0,
@@ -43,78 +47,78 @@ enum class MessageType {
 
 struct MessageBlock
 {
-    virtual size_t size() const         = 0;
-    virtual const uint8_t* data() const = 0;
+    [[nodiscard]] virtual std::size_t size() const    = 0;
+    [[nodiscard]] virtual const uint8_t* data() const = 0;
     virtual ~MessageBlock();
 };
 
 template <typename Primitive>
-struct PrimitiveBlock : public MessageBlock
+struct PrimitiveBlock final : MessageBlock
 {
-    PrimitiveBlock(Primitive value)
-        : data_(value)
+    explicit PrimitiveBlock(Primitive value)
+        : data_{value}
     {
     }
 
-    virtual size_t size() const
+    [[nodiscard]] std::size_t size() const override
     {
         return sizeof(Primitive);
     }
 
-    virtual const uint8_t* data() const
+    [[nodiscard]] const uint8_t* data() const override
     {
-        return reinterpret_cast<const uint8_t*>(&data_);
+        return std::bit_cast<const uint8_t*>(&data_);
     }
 
   private:
-    Primitive data_;
+    Primitive data_{};
 };
 
 
-struct StringBlock : public MessageBlock
+struct StringBlock final : MessageBlock
 {
-    StringBlock(const std::string& value);
+    explicit StringBlock(std::string value);
 
-    virtual size_t size() const;
+    [[nodiscard]] std::size_t size() const override;
 
-    virtual const uint8_t* data() const;
+    [[nodiscard]] const uint8_t* data() const override;
 
   private:
-    std::string data_;
+    std::string data_{};
 };
 
-struct BufferBlock : public MessageBlock
+struct BufferBlock final : MessageBlock
 {
-    BufferBlock(const uint8_t* buffer, size_t length)
-        : buffer_(buffer)
-        , length_(length)
+    BufferBlock(const uint8_t* buffer, const std::size_t length)
+        : buffer_{buffer}
+        , length_{length}
     {
     }
 
-    virtual size_t size() const
+    [[nodiscard]] std::size_t size() const override
     {
         return length_;
     }
 
-    virtual const uint8_t* data() const
+    [[nodiscard]] const uint8_t* data() const override
     {
         return buffer_;
     }
 
   private:
-    const uint8_t* buffer_;
-    size_t length_;
+    const uint8_t* buffer_{};
+    std::size_t length_{};
 };
 
 template <typename PrimitiveType>
 void assert_primitive_type()
 {
-    static_assert(std::is_same<PrimitiveType, MessageType>::value ||
-                      std::is_same<PrimitiveType, int>::value ||
-                      std::is_same<PrimitiveType, unsigned char>::value ||
-                      std::is_same<PrimitiveType, BufferType>::value ||
-                      std::is_same<PrimitiveType, bool>::value ||
-                      std::is_same<PrimitiveType, std::size_t>::value,
+    static_assert(std::is_same_v<PrimitiveType, MessageType> ||
+                      std::is_same_v<PrimitiveType, int> ||
+                      std::is_same_v<PrimitiveType, unsigned char> ||
+                      std::is_same_v<PrimitiveType, BufferType> ||
+                      std::is_same_v<PrimitiveType, bool> ||
+                      std::is_same_v<PrimitiveType, std::size_t>,
                   "this function must only be called with primitives");
 }
 
@@ -131,7 +135,7 @@ class MessageComposer
         return *this;
     }
 
-    MessageComposer& push(uint8_t* buffer, size_t size)
+    MessageComposer& push(const uint8_t* buffer, const std::size_t size)
     {
         push(size);
         message_blocks_.emplace_back(new BufferBlock(buffer, size));
@@ -142,7 +146,7 @@ class MessageComposer
     void send(QTcpSocket* socket) const
     {
         for (const auto& block : message_blocks_) {
-            qint64 offset = 0;
+            auto offset = qint64{0};
             do {
                 offset +=
                     socket->write(reinterpret_cast<const char*>(block->data()),
@@ -163,14 +167,14 @@ class MessageComposer
     }
 
   private:
-    std::deque<std::unique_ptr<MessageBlock>> message_blocks_;
+    std::deque<std::unique_ptr<MessageBlock>> message_blocks_{};
 };
 
 class MessageDecoder
 {
   public:
-    MessageDecoder(QTcpSocket* socket)
-        : socket_(socket)
+    explicit MessageDecoder(QTcpSocket* socket)
+        : socket_{socket}
     {
     }
 
@@ -179,7 +183,7 @@ class MessageDecoder
     {
         assert_primitive_type<PrimitiveType>();
 
-        read_impl(reinterpret_cast<char*>(&value), sizeof(PrimitiveType));
+        read_impl(std::bit_cast<char*>(&value), sizeof(PrimitiveType));
 
         return *this;
     }
@@ -187,12 +191,18 @@ class MessageDecoder
     template <typename StringContainer, typename StringType>
     MessageDecoder& read(StringContainer& symbol_container)
     {
-        size_t number_symbols;
-        read(number_symbols);
+        const auto number_symbols = [&] {
+            auto num{std::size_t{}};
+            read(num);
+            return num;
+        }();
 
         for (int s = 0; s < static_cast<int>(number_symbols); ++s) {
-            StringType symbol_value;
-            read(symbol_value);
+            const auto symbol_value = [&] {
+                auto value{StringType{}};
+                read(value);
+                return value;
+            }();
 
             symbol_container.push_back(symbol_value);
         }
@@ -201,11 +211,11 @@ class MessageDecoder
     }
 
   private:
-    QTcpSocket* socket_;
+    QTcpSocket* socket_{};
 
-    void read_impl(char* dst, size_t read_length)
+    void read_impl(char* dst, const std::size_t read_length) const
     {
-        size_t offset = 0;
+        auto offset = std::size_t{0};
         do {
             offset += socket_->read(dst + offset,
                                     static_cast<qint64>(read_length - offset));
@@ -217,62 +227,78 @@ class MessageDecoder
     }
 };
 
-template <> inline
-MessageComposer& MessageComposer::push<std::string>(const std::string& value)
+template <>
+inline MessageComposer&
+MessageComposer::push<std::string>(const std::string& value)
 {
     push(value.size());
     message_blocks_.emplace_back(new StringBlock(value));
     return *this;
 }
 
-template <> inline
-MessageComposer&
-MessageComposer::push<std::deque<std::string>>(const std::deque<std::string>& container)
+template <>
+inline MessageComposer& MessageComposer::push<std::deque<std::string>>(
+    const std::deque<std::string>& value)
 {
-    push(container.size());
-    for (const auto& value : container) {
-        push(value);
+    push(value.size());
+    for (const auto& element : value) {
+        push(element);
     }
     return *this;
 }
 
-template <> inline
-MessageDecoder& MessageDecoder::read<std::vector<uint8_t>>(std::vector<uint8_t>& container)
+template <>
+inline MessageDecoder&
+MessageDecoder::read<std::vector<uint8_t>>(std::vector<uint8_t>& value)
 {
-    size_t container_size;
-    read(container_size);
+    const auto container_size = [&] {
+        auto size = std::size_t{};
+        read(size);
+        return size;
+    }();
 
-    container.resize(container_size);
-    read_impl(reinterpret_cast<char*>(container.data()), container_size);
+    value.resize(container_size);
+    read_impl(reinterpret_cast<char*>(value.data()), container_size);
 
     return *this;
 }
 
-template <> inline
-MessageDecoder& MessageDecoder::read<std::string>(std::string& value)
+template <>
+inline MessageDecoder& MessageDecoder::read<std::string>(std::string& value)
 {
-    size_t symbol_length;
-    read(symbol_length);
+    const auto symbol_length = [&] {
+        auto length = std::size_t{};
+        read(length);
+        return length;
+    }();
 
     value.resize(symbol_length);
-    read_impl(&value.front(), static_cast<qint64>(symbol_length));
+    read_impl(&value.front(), symbol_length);
 
     return *this;
 }
 
-template <> inline
-MessageDecoder& MessageDecoder::read<QString>(QString& value)
+template <>
+inline MessageDecoder& MessageDecoder::read<QString>(QString& value)
 {
-    size_t symbol_length;
-    read(symbol_length);
+    const auto symbol_length = [&] {
+        auto length = std::size_t{};
+        read(length);
+        return length;
+    }();
 
-    std::vector<char> temp_string;
-    temp_string.resize(symbol_length + 1, '\0');
-    read_impl(reinterpret_cast<char*>(temp_string.data()), symbol_length);
-    value = QString(temp_string.data());
+    const auto temp_string = [&] {
+        auto string = std::vector<char>{};
+        string.resize(symbol_length + 1, '\0');
+        read_impl(string.data(), symbol_length);
+        return string;
+    }();
+
+    value = QString{temp_string.data()};
 
     return *this;
 }
 
+} // namespace oid
 
 #endif // IPC_MESSAGE_EXCHANGE_H_

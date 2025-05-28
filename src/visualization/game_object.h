@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,58 +26,62 @@
 #ifndef GAME_OBJECT_H_
 #define GAME_OBJECT_H_
 
+#include <functional>
 #include <memory>
 
 #include "events.h"
 #include "math/linear_algebra.h"
+#include "stage.h"
 
 
-class GLCanvas;
-class Stage;
-class Component;
-
+namespace oid
+{
 
 class GameObject
 {
   public:
-    Stage* stage;
+    Stage* stage{nullptr};
 
     GameObject();
 
     template <typename T>
-    T* get_component(std::string tag)
+    T* get_component(const std::string& tag)
     {
-        if (all_components_.find(tag) == all_components_.end())
+        if (!all_components_.contains(tag)) {
             return nullptr;
+        }
         return dynamic_cast<T*>(all_components_[tag].get());
     }
 
-    bool initialize();
+    [[nodiscard]] bool initialize() const;
 
-    bool post_initialize();
+    [[nodiscard]] bool post_initialize() const;
 
-    void update();
+    void update() const;
 
     void add_component(const std::string& component_name,
-                       std::shared_ptr<Component> component);
+                       const std::shared_ptr<Component>& component);
 
     mat4 get_pose();
 
     void set_pose(const mat4& pose);
 
-    void request_render_update();
+    void request_render_update() const;
 
-    void mouse_drag_event(int mouse_x, int mouse_y);
+    void mouse_drag_event(int mouse_x, int mouse_y) const;
 
-    void mouse_move_event(int mouse_x, int mouse_y);
+    void mouse_move_event(int mouse_x, int mouse_y) const;
 
-    EventProcessCode key_press_event(int key_code);
+    [[nodiscard]] EventProcessCode key_press_event(int key_code) const;
 
-    const std::map<std::string, std::shared_ptr<Component>>& get_components();
+    const std::map<std::string, std::shared_ptr<Component>, std::less<>>&
+    get_components() const;
 
   private:
-    std::map<std::string, std::shared_ptr<Component>> all_components_;
-    mat4 pose_;
+    std::map<std::string, std::shared_ptr<Component>, std::less<>>
+        all_components_{};
+    mat4 pose_{};
 };
 
+} // namespace oid
 #endif // GAME_OBJECT_H_

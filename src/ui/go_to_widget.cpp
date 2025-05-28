@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2024 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,34 +22,42 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+#include "go_to_widget.h"
 
 #include <cmath>
+
+#include <memory>
 
 #include <QHBoxLayout>
 #include <QIntValidator>
 #include <QKeyEvent>
 
-#include "go_to_widget.h"
+namespace oid
+{
 
 GoToWidget::GoToWidget(QWidget* parent)
-    : QWidget(parent)
+    : QWidget{parent}
 {
-    QHBoxLayout* layout = new QHBoxLayout(this);
+    auto layout = std::make_unique<QHBoxLayout>(this);
     layout->setMargin(0);
     layout->setSpacing(0);
 
-    x_coordinate_ = new DecoratedLineEdit(
+    x_coordinate_ = std::make_unique<DecoratedLineEdit>(
         ":resources/icons/x.svg", "Horizontal coordinate", this);
-    x_coordinate_->setValidator(new QIntValidator(x_coordinate_));
+    x_coordinate_->setValidator(
+        std::make_unique<QIntValidator>(x_coordinate_.get()).release());
 
-    y_coordinate_ = new DecoratedLineEdit(
+    y_coordinate_ = std::make_unique<DecoratedLineEdit>(
         ":resources/icons/y.svg", "Vertical coordinate", this);
-    y_coordinate_->setValidator(new QIntValidator(y_coordinate_));
+    y_coordinate_->setValidator(
+        std::make_unique<QIntValidator>(y_coordinate_.get()).release());
 
-    layout->addWidget(x_coordinate_);
-    layout->addWidget(y_coordinate_);
+    layout->addWidget(x_coordinate_.get());
+    layout->addWidget(y_coordinate_.get());
 
-    setVisible(false);
+    setLayout(layout.release());
+
+    QWidget::setVisible(false);
 }
 
 
@@ -62,19 +70,22 @@ void GoToWidget::keyPressEvent(QKeyEvent* e)
 
         return;
     case Qt::Key_Enter:
+        [[fallthrough]];
     case Qt::Key_Return:
         toggle_visible();
         e->accept();
         Q_EMIT(go_to_requested(x_coordinate_->text().toFloat() + 0.5f,
                                y_coordinate_->text().toFloat() + 0.5f));
         return; // Let the completer do default behavior
+    default:
+        return;
     }
 }
 
 
 void GoToWidget::toggle_visible()
 {
-    QWidget* parent_widget = static_cast<QWidget*>(parent());
+    const auto parent_widget = dynamic_cast<QWidget*>(parent());
 
     if (isVisible()) {
         hide();
@@ -92,8 +103,11 @@ void GoToWidget::toggle_visible()
 }
 
 
-void GoToWidget::set_defaults(float default_x, float default_y)
+void GoToWidget::set_defaults(const float default_x,
+                              const float default_y) const
 {
     x_coordinate_->setText(QString::number(std::round(default_x - 0.5f)));
     y_coordinate_->setText(QString::number(std::round(default_y - 0.5f)));
 }
+
+} // namespace oid

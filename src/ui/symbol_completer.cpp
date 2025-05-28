@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2024 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,11 +25,11 @@
 
 #include "symbol_completer.h"
 
+namespace oid
+{
 
 SymbolCompleter::SymbolCompleter(QObject* parent)
-    : QCompleter(parent)
-    , list_()
-    , model_()
+    : QCompleter{parent}
 {
     setModel(&model_);
 }
@@ -37,7 +37,7 @@ SymbolCompleter::SymbolCompleter(QObject* parent)
 
 void SymbolCompleter::update(const QString& word)
 {
-    QStringList filtered = list_.filter(word, caseSensitivity());
+    const auto filtered = list_.filter(word, caseSensitivity());
     model_.setStringList(filtered);
     word_ = word;
     complete();
@@ -54,3 +54,5 @@ const QString& SymbolCompleter::word() const
 {
     return word_;
 }
+
+} // namespace oid

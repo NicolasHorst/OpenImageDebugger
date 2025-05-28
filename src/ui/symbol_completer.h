@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2024 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,25 +30,28 @@
 #include <QStringList>
 #include <QStringListModel>
 
+namespace oid
+{
 
-class SymbolCompleter : public QCompleter
+class SymbolCompleter final : public QCompleter
 {
     Q_OBJECT
 
   public:
-    SymbolCompleter(QObject* parent = nullptr);
+    explicit SymbolCompleter(QObject* parent = nullptr);
 
     void update(const QString& word);
 
     void update_symbol_list(const QStringList& symbols);
 
-    const QString& word() const;
+    [[nodiscard]] const QString& word() const;
 
   private:
-    QStringList list_;
-    QStringListModel model_;
-    QString word_;
+    QStringList list_{};
+    QStringListModel model_{};
+    QString word_{};
 };
 
+} // namespace oid
 
 #endif // SYMBOL_COMPLETER_H_

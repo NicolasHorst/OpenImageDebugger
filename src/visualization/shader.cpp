@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,14 +23,17 @@
  * IN THE SOFTWARE.
  */
 
-#include <cstring>
-
 #include "shader.h"
 
+#include <cstring>
+
+#include <iostream>
+
+namespace oid
+{
 
 ShaderProgram::ShaderProgram(GLCanvas* gl_canvas)
-    : program_(0)
-    , gl_canvas_(gl_canvas)
+    : gl_canvas_{gl_canvas}
 {
 }
 
@@ -41,9 +44,9 @@ ShaderProgram::~ShaderProgram()
 }
 
 
-bool ShaderProgram::is_shader_outdated(TexelChannels texel_format,
+bool ShaderProgram::is_shader_outdated(const TexelChannels texel_format,
                                        const std::vector<std::string>& uniforms,
-                                       const char* pixel_layout)
+                                       const std::string& pixel_layout) const
 {
     // If the texel format or the uniform container size changed,
     // the program must be created again
@@ -51,10 +54,10 @@ bool ShaderProgram::is_shader_outdated(TexelChannels texel_format,
         return true;
     }
 
-    // The program must also be created again if an uniform name
+    // The program must also be created again if a uniform name
     // changed
     for (const auto& uniform_name : uniforms) {
-        if (uniforms_.find(uniform_name) == uniforms_.end()) {
+        if (!uniforms_.contains(uniform_name)) {
             return true;
         }
     }
@@ -71,8 +74,8 @@ bool ShaderProgram::is_shader_outdated(TexelChannels texel_format,
 
 bool ShaderProgram::create(const char* v_source,
                            const char* f_source,
-                           TexelChannels texel_format,
-                           const char* pixel_layout,
+                           const TexelChannels texel_format,
+                           const std::string& pixel_layout,
                            const std::vector<std::string>& uniforms)
 {
     if (program_ != 0) {
@@ -85,10 +88,10 @@ bool ShaderProgram::create(const char* v_source,
     }
 
     texel_format_ = texel_format;
-    memcpy(pixel_layout_, pixel_layout, 4);
-    pixel_layout_[4]       = '\0';
-    GLuint vertex_shader   = compile(GL_VERTEX_SHADER, v_source);
-    GLuint fragment_shader = compile(GL_FRAGMENT_SHADER, f_source);
+    memcpy(pixel_layout_.data(), pixel_layout.data(), 4);
+    pixel_layout_[4]           = '\0';
+    const auto vertex_shader   = compile(GL_VERTEX_SHADER, v_source);
+    const auto fragment_shader = compile(GL_FRAGMENT_SHADER, f_source);
 
     if (vertex_shader == 0 || fragment_shader == 0) {
         return false;
@@ -105,7 +108,8 @@ bool ShaderProgram::create(const char* v_source,
 
     // Get uniform locations
     for (const auto& name : uniforms) {
-        GLuint loc = gl_canvas_->glGetUniformLocation(program_, name.c_str());
+        const auto loc =
+            gl_canvas_->glGetUniformLocation(program_, name.c_str());
         uniforms_[name] = loc;
     }
 
@@ -113,40 +117,45 @@ bool ShaderProgram::create(const char* v_source,
 }
 
 
-void ShaderProgram::uniform1i(const std::string& name, int value) const
+void ShaderProgram::uniform1i(const std::string& name, const int value) const
 {
-    gl_canvas_->glUniform1i(uniforms_.at(name), value);
+    gl_canvas_->glUniform1i(static_cast<GLint>(uniforms_.at(name)), value);
 }
 
 
-void ShaderProgram::uniform2f(const std::string& name, float x, float y) const
+void ShaderProgram::uniform2f(const std::string& name,
+                              const float x,
+                              const float y) const
 {
-    gl_canvas_->glUniform2f(uniforms_.at(name), x, y);
+    gl_canvas_->glUniform2f(static_cast<GLint>(uniforms_.at(name)), x, y);
 }
 
 
 void ShaderProgram::uniform3fv(const std::string& name,
-                               int count,
+                               const int count,
                                const float* data) const
 {
-    gl_canvas_->glUniform3fv(uniforms_.at(name), count, data);
+    gl_canvas_->glUniform3fv(
+        static_cast<GLint>(uniforms_.at(name)), count, data);
 }
 
 
 void ShaderProgram::uniform4fv(const std::string& name,
-                               int count,
+                               const int count,
                                const float* data) const
 {
-    gl_canvas_->glUniform4fv(uniforms_.at(name), count, data);
+    gl_canvas_->glUniform4fv(
+        static_cast<GLint>(uniforms_.at(name)), count, data);
 }
 
 
 void ShaderProgram::uniform_matrix4fv(const std::string& name,
-                                      int count,
-                                      GLboolean transpose,
+                                      const int count,
+                                      const GLboolean transpose,
                                       const float* value) const
 {
-    gl_canvas_->glUniformMatrix4fv(uniforms_.at(name), count, transpose, value);
+    gl_canvas_->glUniformMatrix4fv(
+        static_cast<GLint>(uniforms_.at(name)), count, transpose, value);
 }
 
 
@@ -156,37 +165,45 @@ void ShaderProgram::use() const
 }
 
 
-GLuint ShaderProgram::compile(GLuint type, GLchar const* source)
+const char* ShaderProgram::get_texel_format_define() const
 {
-    GLuint shader = gl_canvas_->glCreateShader(type);
+    switch (texel_format_) {
+    case TexelChannels::FormatR:
+        return "#define FORMAT_R\n";
+    case TexelChannels::FormatRG:
+        return "#define FORMAT_RG\n";
+    case TexelChannels::FormatRGB:
+        return "#define FORMAT_RGB\n";
+    case TexelChannels::FormatRGBA:
+        return "#define FORMAT_RGBA\n";
+    default:
+        return "";
+    }
+}
 
-    const char* src[] = {
-        "#version 120\n",
 
-        // clang-format off
-        texel_format_ == FormatR ?   "#define FORMAT_R\n" :
-        texel_format_ == FormatRG ?  "#define FORMAT_RG\n" :
-        texel_format_ == FormatRGB ? "#define FORMAT_RGB\n" :
-                                     "",
-        // clang-format on
+GLuint ShaderProgram::compile(const GLuint type, const GLchar* source) const
+{
+    const auto shader = gl_canvas_->glCreateShader(type);
 
-        "#define PIXEL_LAYOUT ",
-        pixel_layout_,
+    auto src = std::array{"#version 120\n",
+                          get_texel_format_define(),
+                          "#define PIXEL_LAYOUT ",
+                          pixel_layout_.data(),
+                          source};
 
-        source};
-
-    gl_canvas_->glShaderSource(shader, 5, src, NULL);
+    gl_canvas_->glShaderSource(shader, 5, src.data(), nullptr);
     gl_canvas_->glCompileShader(shader);
 
-    GLint compiled;
+    auto compiled = GLint{};
     gl_canvas_->glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
 
     if (!compiled) {
         GLint length;
         gl_canvas_->glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
-        std::string log(length, ' ');
+        auto log = std::string(length, ' ');
         gl_canvas_->glGetShaderInfoLog(shader, length, &length, &log[0]);
-        std::cerr << "Failed to compile shadertype: " + get_shader_type(type)
+        std::cerr << "Failed to compile shader_type: " + get_shader_type(type)
                   << std::endl
                   << log << std::endl;
         return false;
@@ -195,9 +212,9 @@ GLuint ShaderProgram::compile(GLuint type, GLchar const* source)
 }
 
 
-std::string ShaderProgram::get_shader_type(GLuint type)
+std::string ShaderProgram::get_shader_type(const GLuint type)
 {
-    std::string name;
+    auto name = std::string{};
     switch (type) {
     case GL_VERTEX_SHADER:
         name = "Vertex Shader";
@@ -211,3 +228,5 @@ std::string ShaderProgram::get_shader_type(GLuint type)
     }
     return name;
 }
+
+} // namespace oid

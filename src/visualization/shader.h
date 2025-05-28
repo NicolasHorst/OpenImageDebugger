@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,7 +26,7 @@
 #ifndef SHADER_H_
 #define SHADER_H_
 
-#include <iostream>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -35,20 +35,30 @@
 
 #include "ui/gl_canvas.h"
 
+namespace oid
+{
 
 class ShaderProgram
 {
   public:
-    enum TexelChannels { FormatR, FormatRG, FormatRGB, FormatRGBA };
+    enum class TexelChannels { FormatR, FormatRG, FormatRGB, FormatRGBA };
 
-    ShaderProgram(GLCanvas* gl_canvas);
+    explicit ShaderProgram(GLCanvas* gl_canvas);
+
+    ShaderProgram(const ShaderProgram&) = delete;
+
+    ShaderProgram(ShaderProgram&&) = delete;
+
+    ShaderProgram& operator=(const ShaderProgram&) = delete;
+
+    ShaderProgram& operator=(ShaderProgram&&) = delete;
 
     ~ShaderProgram();
 
     bool create(const char* v_source,
                 const char* f_source,
                 TexelChannels texel_format,
-                const char* pixel_layout,
+                const std::string& pixel_layout,
                 const std::vector<std::string>& uniforms);
 
     // Uniform handlers
@@ -71,23 +81,27 @@ class ShaderProgram
     void use() const;
 
   private:
-    GLuint program_;
+    GLuint program_{0};
 
-    GLCanvas* gl_canvas_;
+    GLCanvas* gl_canvas_{};
 
-    TexelChannels texel_format_;
+    TexelChannels texel_format_{};
 
-    std::map<std::string, GLuint> uniforms_;
+    std::map<std::string, GLuint, std::less<>> uniforms_{};
 
-    char pixel_layout_[5];
+    std::string pixel_layout_{};
 
-    GLuint compile(GLuint type, GLchar const* source);
+    GLuint compile(GLuint type, GLchar const* source) const;
 
-    std::string get_shader_type(GLuint type);
+    static std::string get_shader_type(GLuint type);
 
     bool is_shader_outdated(TexelChannels texel_format,
                             const std::vector<std::string>& uniforms,
-                            const char* pixel_layout);
+                            const std::string& pixel_layout) const;
+
+    const char* get_texel_format_define() const;
 };
+
+} // namespace oid
 
 #endif // SHADER_H_

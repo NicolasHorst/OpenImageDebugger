@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,35 +23,28 @@
  * IN THE SOFTWARE.
  */
 
-#include <csignal>
-
-#include <string>
+#include "ui/main_window/main_window.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
 
-#include "debuggerinterface/preprocessor_directives.h"
-#include "ui/main_window/main_window.h"
 
-using namespace std;
-
-
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    QApplication app(argc, argv);
+    auto app = QApplication{argc, argv};
 
-    QCommandLineParser parser;
+    auto parser = QCommandLineParser{};
     parser.addOptions({
         {"h", "hostname", "hostname", "127.0.0.1"},
         {"p", "port", "port", "9588"},
     });
     parser.parse(QCoreApplication::arguments());
 
-    ConnectionSettings host_settings;
-    host_settings.url = parser.value("h").toStdString();
+    auto host_settings = oid::ConnectionSettings{};
+    host_settings.url  = parser.value("h").toStdString();
     host_settings.port = static_cast<uint16_t>(parser.value("p").toUInt());
 
-    MainWindow window(host_settings);
-    window.show();
-    return app.exec();
+    auto window = oid::MainWindow{host_settings};
+    window.showWindow();
+    return QApplication::exec();
 }

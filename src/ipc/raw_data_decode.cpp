@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2015-2019 OpenImageDebugger contributors
+ * Copyright (c) 2015-2025 OpenImageDebugger contributors
  * (https://github.com/OpenImageDebugger/OpenImageDebugger)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,16 +27,21 @@
 
 #include <cassert>
 
-std::vector<std::uint8_t>
-    make_float_buffer_from_double(const std::vector<std::uint8_t>& buff_double)
+#include <bit>
+
+namespace oid
 {
-    int element_count = buff_double.size() / sizeof(double);
+
+std::vector<std::uint8_t>
+make_float_buffer_from_double(const std::vector<std::uint8_t>& buff_double)
+{
+    const auto element_count = buff_double.size() / sizeof(double);
     std::vector<std::uint8_t> buff_float(element_count * sizeof(float));
 
     // Cast from double to float
-    const double* src = reinterpret_cast<const double*>(buff_double.data());
-    float* dst = reinterpret_cast<float*>(buff_float.data());
-    for (int i = 0; i < element_count; ++i) {
+    const auto src = std::bit_cast<const double*>(buff_double.data());
+    const auto dst = std::bit_cast<float*>(buff_float.data());
+    for (std::size_t i = 0; i < element_count; ++i) {
         dst[i] = static_cast<float>(src[i]);
     }
 
@@ -44,14 +49,15 @@ std::vector<std::uint8_t>
 }
 
 
-size_t typesize(BufferType type)
+size_t type_size(const BufferType type)
 {
-    switch(type) {
+    switch (type) {
     case BufferType::Int32:
-        return sizeof(int32_t);
-    case BufferType::Short: // fall-through
+        return sizeof(std::int32_t);
+    case BufferType::Short:
+        [[fallthrough]];
     case BufferType::UnsignedShort:
-        return sizeof(int16_t);
+        return sizeof(std::int16_t);
     case BufferType::Float32:
         return sizeof(float);
     case BufferType::Float64:
@@ -59,7 +65,9 @@ size_t typesize(BufferType type)
     case BufferType::UnsignedByte:
         return sizeof(std::uint8_t);
     default:
-        assert("unknow BufferType received");
+        assert(!"Unknown BufferType received");
         return sizeof(std::uint8_t);
     }
 }
+
+} // namespace oid
